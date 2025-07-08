@@ -1,9 +1,7 @@
-﻿using Microsoft.Data.SqlClient;
-using System.Data;
-using Dapper;
-using System.IO;
+﻿using Dapper;
+using Microsoft.Data.SqlClient;
 using OfficeOpenXml;
-using System.ComponentModel;
+using System.Data;
 
 namespace ExcelReader.Model;
 
@@ -21,6 +19,8 @@ public class ContactsRepository
 
     public void RecreateDatabase()
     {
+        Console.WriteLine("Creating database...");
+
         var masterConnectionString = $"{_connectionString};Database=master;";
 
         using (IDbConnection db = new SqlConnection(masterConnectionString))
@@ -36,12 +36,14 @@ public class ContactsRepository
             db.Execute(dropDbSql);
 
             db.Execute($"CREATE DATABASE [{_targetDbName}]");
-            Console.WriteLine($"Database {_targetDbName} recreated.");
+            Console.WriteLine($"Database {_targetDbName} created.\n");
         }
     }
 
     public void CreateTable()
     {
+        Console.WriteLine("Creating Contacts table in ExcelReaderDb...");
+
         using (SqlConnection connection = new SqlConnection(_connectionString))
         {
             connection.Open();
@@ -67,10 +69,11 @@ public class ContactsRepository
                 try
                 {
                     command.ExecuteNonQuery();
+                    Console.WriteLine("Contacts table created.\n");
                 }
                 catch (SqlException ex)
                 {
-                    Console.WriteLine($"An error occurred while creating the Contacts table: {ex.Message}");
+                    Console.WriteLine($"An error occurred while creating the Contacts table: {ex.Message}\n");
                 }
             }
         }
@@ -81,14 +84,17 @@ public class ContactsRepository
         string projectRoot = Path.GetFullPath(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, @"..\..\.."));
         string filePath = Path.Combine(projectRoot, "ContactInfo.xlsx");
 
-        Console.WriteLine("Current Directory: " + Directory.GetCurrentDirectory());
-        Console.WriteLine("Looking for file at: " + filePath);
+        Console.WriteLine("Looking for the file at: " + filePath);
 
         if (!File.Exists(filePath))
         {
-            Console.WriteLine("File not found at: " + filePath);
+            Console.WriteLine("File not found at: " + filePath + "\n");
             return;
         }
+
+        Console.WriteLine("File found.\n");
+
+        Console.WriteLine("Populating data from ContactInfo.xlsx to Contacts table...");
 
         using (SqlConnection connection = new SqlConnection(_connectionString))
         {
@@ -103,16 +109,15 @@ public class ContactsRepository
 
                 for (int row = 2; row <= rowCount; row++)
                 {
-                    //int id = worksheet.Cells[row, 1].GetValue<int>();
                     string firstName = worksheet.Cells[row, 2].GetValue<string>();
                     string lastName = worksheet.Cells[row, 3].GetValue<string>();
                     string phoneNumber = worksheet.Cells[row, 4].GetValue<string>();
                     string emailAddress = worksheet.Cells[row, 5].GetValue<string>();
                     string addressLine1 = worksheet.Cells[row, 6].GetValue<string>();
                     string addressLine2 = worksheet.Cells[row, 7].GetValue<string>();
-                    string city = worksheet.Cells[row, 7].GetValue<string>();
-                    string state = worksheet.Cells[row, 8].GetValue<string>();
-                    string zipCode = worksheet.Cells[row, 9].GetValue<string>();
+                    string city = worksheet.Cells[row, 8].GetValue<string>();
+                    string state = worksheet.Cells[row, 9].GetValue<string>();
+                    string zipCode = worksheet.Cells[row, 10].GetValue<string>();
 
                     var parameters = new { FirstName = firstName, LastName = lastName, PhoneNumber = phoneNumber, EmailAddress = emailAddress, AddressLine1 = addressLine1, AddressLine2 = addressLine2, City = city, State = state, ZipCode = zipCode };
 
@@ -120,10 +125,14 @@ public class ContactsRepository
                 }
             }
         }
+
+        Console.WriteLine("Data populated from ContactInfo.xlsx to Contacts table.\n");
     }
 
     public List<Contact> GetAllContacts()
     {
+        Console.WriteLine("Gathering contacts data for display...\n");
+
         var contacts = new List<Contact>();
 
         using (SqlConnection connection = new SqlConnection(_connectionString))
@@ -156,5 +165,4 @@ public class ContactsRepository
 
         return contacts;
     }
-
 }
