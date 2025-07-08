@@ -1,0 +1,5 @@
+{
+    "ConnectionStrings": {
+        "connection": "Server=DESKTOP-PLS9OA9; Database=ContactsDb; Trusted_Connection=True; MultipleActiveResultSets=True; TrustServerCertificate=True;"
+    }
+}
