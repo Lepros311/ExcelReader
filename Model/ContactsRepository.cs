@@ -139,15 +139,15 @@ public class ContactsRepository
                     var contact = new Contact
                     {
                         Id = reader.GetInt32(0),
-                        FirstName = reader.GetString(1),
-                        LastName = reader.GetString(2),
-                        PhoneNumber = reader.GetString(3),
-                        EmailAddress = reader.GetString(4),
-                        AddressLine1 = reader.GetString(5),
-                        AddressLine2 = reader.GetString(6),
-                        City = reader.GetString(7),
-                        State = reader.GetString(8),
-                        ZipCode = reader.GetString(9),
+                        FirstName = reader.IsDBNull(1) ? null : reader.GetString(1),
+                        LastName = reader.IsDBNull(2) ? null : reader.GetString(2),
+                        PhoneNumber = reader.IsDBNull(3) ? null : reader.GetString(3),
+                        EmailAddress = reader.IsDBNull(4) ? null : reader.GetString(4),
+                        AddressLine1 = reader.IsDBNull(5) ? null : reader.GetString(5),
+                        AddressLine2 = reader.IsDBNull(6) ? null : reader.GetString(6),
+                        City = reader.IsDBNull(7) ? null : reader.GetString(7),
+                        State = reader.IsDBNull(8) ? null : reader.GetString(8),
+                        ZipCode = reader.IsDBNull(9) ? null : reader.GetString(9),
                     };
                     contacts.Add(contact);
                 }

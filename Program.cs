@@ -1,4 +1,5 @@
 ﻿using ExcelReader.Model;
+using ExcelReader.View;
 using OfficeOpenXml;
 
 Console.Title = "Excel Reader";
@@ -13,3 +14,4 @@ contactsRepository.CreateTable();
 if (DatabaseUtility.CountRows("Contacts") == 0)
     contactsRepository.SeedContacts();
 
+Display.PrintAllContacts("Contacts");
