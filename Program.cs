@@ -1,13 +1,15 @@
 ﻿using ExcelReader.Model;
-using Microsoft.Data.SqlClient;
+using OfficeOpenXml;
 
 Console.Title = "Excel Reader";
+
+ExcelPackage.License.SetNonCommercialPersonal("Andrew");
 
 var contactsRepository = new ContactsRepository(DatabaseUtility.GetConnectionString());
 
 contactsRepository.RecreateDatabase();
 contactsRepository.CreateTable();
 
-if (DatabaseUtility.CountRows("Stacks") == 0)
+if (DatabaseUtility.CountRows("Contacts") == 0)
     contactsRepository.SeedContacts();
 

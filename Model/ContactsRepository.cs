@@ -1,6 +1,9 @@
 ﻿using Microsoft.Data.SqlClient;
 using System.Data;
 using Dapper;
+using System.IO;
+using OfficeOpenXml;
+using System.ComponentModel;
 
 namespace ExcelReader.Model;
 
@@ -13,7 +16,7 @@ public class ContactsRepository
     public ContactsRepository(string connectionString)
     {
         _connectionString = connectionString;
-        _targetDbName = "ContactsDb";
+        _targetDbName = "ExcelReaderDb";
     }
 
     public void RecreateDatabase()
@@ -75,19 +78,45 @@ public class ContactsRepository
 
     public void SeedContacts()
     {
+        string projectRoot = Path.GetFullPath(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, @"..\..\.."));
+        string filePath = Path.Combine(projectRoot, "ContactInfo.xlsx");
+
+        Console.WriteLine("Current Directory: " + Directory.GetCurrentDirectory());
+        Console.WriteLine("Looking for file at: " + filePath);
+
+        if (!File.Exists(filePath))
+        {
+            Console.WriteLine("File not found at: " + filePath);
+            return;
+        }
+
         using (SqlConnection connection = new SqlConnection(_connectionString))
         {
             connection.Open();
-            string insertContactsQuery = "INSERT INTO Contacts (StackName) VALUES (@StackName); SELECT SCOPE_IDENTITY();";
+            string insertContactsQuery = "INSERT INTO Contacts (FirstName, LastName, PhoneNumber, EmailAddress, AddressLine1, AddressLine2, City, State, ZipCode) VALUES (@FirstName, @LastName, @PhoneNumber, @EmailAddress, @AddressLine1, @AddressLine2, @City, @State, @ZipCode); SELECT SCOPE_IDENTITY();";
 
-            var stackNames = new List<string> { "Math", "Science", "History" };
-
-            foreach (var stackName in stackNames)
+            using (var package = new ExcelPackage(new FileInfo(filePath)))
             {
-                using (SqlCommand command = new SqlCommand(insertContactsQuery, connection))
+                var worksheet = package.Workbook.Worksheets[0];
+
+                int rowCount = worksheet.Dimension.Rows;
+
+                for (int row = 2; row <= rowCount; row++)
                 {
-                    command.Parameters.AddWithValue("@StackName", stackName);
-                    command.ExecuteScalar();
+                    //int id = worksheet.Cells[row, 1].GetValue<int>();
+                    string firstName = worksheet.Cells[row, 2].GetValue<string>();
+                    string lastName = worksheet.Cells[row, 3].GetValue<string>();
+                    string phoneNumber = worksheet.Cells[row, 4].GetValue<string>();
+                    string emailAddress = worksheet.Cells[row, 5].GetValue<string>();
+                    string addressLine1 = worksheet.Cells[row, 6].GetValue<string>();
+                    string addressLine2 = worksheet.Cells[row, 7].GetValue<string>();
+                    string city = worksheet.Cells[row, 7].GetValue<string>();
+                    string state = worksheet.Cells[row, 8].GetValue<string>();
+                    string zipCode = worksheet.Cells[row, 9].GetValue<string>();
+
+                    var parameters = new { FirstName = firstName, LastName = lastName, PhoneNumber = phoneNumber, EmailAddress = emailAddress, AddressLine1 = addressLine1, AddressLine2 = addressLine2, City = city, State = state, ZipCode = zipCode };
+
+                    connection.Execute(insertContactsQuery, parameters);
                 }
             }
         }
