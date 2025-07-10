@@ -7,14 +7,15 @@ Console.Title = "Excel Reader";
 
 ExcelPackage.License.SetNonCommercialPersonal("Andrew");
 
-var contactsRepository = new DataRepository(DatabaseUtility.GetConnectionString());
+var dataRepository = new DataRepository(DatabaseUtility.GetConnectionString());
 
-contactsRepository.RecreateDatabase();
+dataRepository.RecreateDatabase();
 
 var userInterface = new UserInterface();
 string filePath = userInterface.GetFilePath();
 
-var (tableName, fileName) = contactsRepository.CreateTableFromExcel(filePath);
-contactsRepository.SeedData(fileName, tableName);
+var (tableName, fileName) = dataRepository.CreateTableFromExcel(filePath);
+dataRepository.SeedData(fileName, tableName);
 
-Display.PrintAllData(tableName);
+bool hasIdColumn = dataRepository.CheckIfIdColumnExistsInExcel(filePath);
+Display.PrintAllData(tableName, hasIdColumn);

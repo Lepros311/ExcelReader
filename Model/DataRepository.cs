@@ -2,6 +2,7 @@
 using Microsoft.Data.SqlClient;
 using OfficeOpenXml;
 using System.Data;
+using System.Text;
 
 namespace ExcelReader.Model;
 
@@ -130,12 +131,14 @@ public class DataRepository
                     for (int column = 1; column <= columnCount; column++)
                     {
                         string header = headers[column - 1];
-                        object value = worksheet.Cells[row, column].Value;
-                        parameters[header] = value;
+                        object value = worksheet.Cells[row, column].Text;
+
+                        string cleanParameterName = SanitizeColumnName(header);
+                        parameters[cleanParameterName] = value;
                     }
 
                     var insertColumns = string.Join(", ", headers.Select(h => $"[{h}]"));
-                    var insertValues = string.Join(", ", headers.Select(h => $"@{h}"));
+                    var insertValues = string.Join(", ", headers.Select(h => $"@{SanitizeColumnName(h)}"));
 
                     string insertQuery = $"INSERT INTO [{tableName}] ({insertColumns}) VALUES ({insertValues})";
 
@@ -146,6 +149,36 @@ public class DataRepository
 
         Console.WriteLine($"Data populated from [{fileName}] to [{tableName}] table.\n");
     }
+
+    private string SanitizeColumnName(string columnName)
+    {
+        // Use a StringBuilder to construct the sanitized name
+        var sanitized = new StringBuilder();
+
+        // Loop through each character in the column name
+        foreach (char c in columnName)
+        {
+            // Check if the character is a letter, digit, or underscore
+            if (char.IsLetterOrDigit(c) || c == '_')
+            {
+                sanitized.Append(c);
+            }
+            else if (c == ' ')
+            {
+                // Replace spaces with an underscore
+                sanitized.Append('_');
+            }
+        }
+
+        // Ensure the name does not start with a digit
+        if (sanitized.Length > 0 && char.IsDigit(sanitized[0]))
+        {
+            sanitized.Insert(0, '_'); // Prepend an underscore if it starts with a digit
+        }
+
+        return sanitized.ToString();
+    }
+
 
     public List<Dictionary<string, object>> GetAllData(string tableName)
     {
@@ -177,5 +210,27 @@ public class DataRepository
         }
 
         return data;
+    }
+
+    public bool CheckIfIdColumnExistsInExcel(string filePath)
+    {
+        // Ensure the Excel package is disposed properly
+        using (var package = new ExcelPackage(new FileInfo(filePath)))
+        {
+            // Get the first worksheet
+            var worksheet = package.Workbook.Worksheets[0];
+            // Get the first row (header row)
+            var headerRow = worksheet.Cells[1, 1, 1, worksheet.Dimension.End.Column];
+            // Check if "Id" exists in the header row
+            foreach (var cell in headerRow)
+            {
+                if (cell.Text.Equals("Id", StringComparison.OrdinalIgnoreCase))
+                {
+                    return true; // "Id" column exists
+                }
+            }
+        }
+        return false; // "Id" column does not exist
+
     }
 }

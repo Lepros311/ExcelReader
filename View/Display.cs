@@ -5,7 +5,7 @@ namespace ExcelReader.View;
 
 public class Display
 {
-    public static void PrintAllData(string tableName)
+    public static void PrintAllData(string tableName, bool hasIdColumn)
     {
         var repository = new DataRepository(DatabaseUtility.GetConnectionString());
         var data = repository.GetAllData(tableName);
@@ -24,13 +24,29 @@ public class Display
 
         foreach (var key in data[0].Keys)
         {
-            table.AddColumn(new TableColumn($"[dodgerblue1]{key}[/]").Centered().NoWrap());
+            if (key == "Id" && hasIdColumn)
+            {
+                table.AddColumn(new TableColumn($"[dodgerblue1]{key}[/]").Centered().NoWrap());
+            }
+            else if (key != "Id")
+            {
+                table.AddColumn(new TableColumn($"[dodgerblue1]{key}[/]").Centered().NoWrap());
+            }
         }
 
         foreach (var row in data)
         {
             var rowValues = row.Values.Select(value => value?.ToString() ?? string.Empty).ToArray();
-            table.AddRow(rowValues);
+
+            if (hasIdColumn)
+            {
+                table.AddRow(rowValues);
+            }
+            else
+            {
+                var filteredRowValues = rowValues.Where((_, index) => data[0].Keys.ElementAt(index) != "Id").ToArray();
+                table.AddRow(filteredRowValues);
+            }
         }
 
         int maxWidth = Console.LargestWindowWidth;
