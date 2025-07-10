@@ -5,48 +5,32 @@ namespace ExcelReader.View;
 
 public class Display
 {
-    public static void PrintAllContacts(string heading)
+    public static void PrintAllData(string tableName)
     {
-        var repository = new ContactsRepository(DatabaseUtility.GetConnectionString());
-        var contacts = repository.GetAllContacts();
+        var repository = new DataRepository(DatabaseUtility.GetConnectionString());
+        var data = repository.GetAllData(tableName);
 
-        var rule = new Rule($"[green]{heading}[/]");
+        var rule = new Rule($"[green]{tableName}[/]");
         rule.Justification = Justify.Left;
         AnsiConsole.Write(rule);
 
-        var table = new Table()
-            .AddColumn(new TableColumn("[dodgerblue1]ID[/]").Centered().Width(5).NoWrap())
-            .AddColumn(new TableColumn("[dodgerblue1]First Name[/]").Centered().Width(15).NoWrap())
-            .AddColumn(new TableColumn("[dodgerblue1]Last Name[/]").Centered().Width(20).NoWrap())
-            .AddColumn(new TableColumn("[dodgerblue1]Phone Number[/]").Centered().Width(20).NoWrap())
-            .AddColumn(new TableColumn("[dodgerblue1]Email Address[/]").Centered().Width(30).NoWrap())
-            .AddColumn(new TableColumn("[dodgerblue1]Address Line 1[/]").Centered().Width(25).NoWrap())
-            .AddColumn(new TableColumn("[dodgerblue1]Address Line 2[/]").Centered().Width(20).NoWrap())
-            .AddColumn(new TableColumn("[dodgerblue1]City[/]").Centered().Width(20).NoWrap())
-            .AddColumn(new TableColumn("[dodgerblue1]State[/]").Centered().Width(20).NoWrap())
-            .AddColumn(new TableColumn("[dodgerblue1]Zip Code[/]").Centered().Width(15).NoWrap());
-
-        if (contacts == null || contacts.Count == 0)
+        if (data == null || data.Count == 0)
         {
             AnsiConsole.MarkupLine("[red]No records found.[/]");
             return;
         }
 
-        var sortedContacts = contacts.OrderBy(contact => contact.Id).ToList();
+        var table = new Table();
 
-        foreach (var contact in sortedContacts)
+        foreach (var key in data[0].Keys)
         {
-            table.AddRow(
-                contact.Id.ToString(),
-                contact.FirstName ?? string.Empty,
-                contact.LastName ?? string.Empty,
-                contact.PhoneNumber ?? string.Empty,
-                contact.EmailAddress ?? string.Empty,
-                contact.AddressLine1 ?? string.Empty,
-                contact.AddressLine2 ?? string.Empty,
-                contact.City ?? string.Empty,
-                contact.State ?? string.Empty,
-                contact.ZipCode ?? string.Empty);
+            table.AddColumn(new TableColumn($"[dodgerblue1]{key}[/]").Centered().NoWrap());
+        }
+
+        foreach (var row in data)
+        {
+            var rowValues = row.Values.Select(value => value?.ToString() ?? string.Empty).ToArray();
+            table.AddRow(rowValues);
         }
 
         int maxWidth = Console.LargestWindowWidth;
