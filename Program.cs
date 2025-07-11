@@ -1,7 +1,6 @@
 ﻿using ExcelReader.Model;
 using ExcelReader.View;
 using OfficeOpenXml;
-using System.IO.Enumeration;
 
 Console.Title = "Excel Reader";
 

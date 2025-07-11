@@ -24,6 +24,13 @@ public class Display
 
         foreach (var key in data[0].Keys)
         {
+            string header = key;
+
+            foreach (var row in data)
+            {
+                string value = row[key]?.ToString() ?? string.Empty;
+            }
+
             if (key == "Id" && hasIdColumn)
             {
                 table.AddColumn(new TableColumn($"[dodgerblue1]{key}[/]").Centered().NoWrap());
@@ -55,7 +62,7 @@ public class Display
         int desiredHeight = Math.Min(50, maxHeight);
         Console.SetWindowSize(desiredWidth, desiredHeight);
 
-        AnsiConsole.Write(table.Width(190).ShowRowSeparators().Border(TableBorder.DoubleEdge));
+        AnsiConsole.Write(table.ShowRowSeparators().Border(TableBorder.DoubleEdge));
         System.Threading.Thread.Sleep(2000);
     }
 }
