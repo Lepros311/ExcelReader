@@ -21,29 +21,36 @@ public class Display
         }
 
         var table = new Table();
+        var totalWidth = 0;
+
+        var columnWidths = new Dictionary<string, int>();
 
         foreach (var key in data[0].Keys)
         {
             string header = key;
+            int maxColWidth = header.Length + 10;
 
             foreach (var row in data)
             {
                 string value = row[key]?.ToString() ?? string.Empty;
+                maxColWidth = Math.Max(maxColWidth, value.Length + 10);
             }
 
             if (key == "Id" && hasIdColumn)
             {
                 table.AddColumn(new TableColumn($"[dodgerblue1]{key}[/]").Centered().NoWrap());
+                columnWidths[key] = maxColWidth;
             }
             else if (key != "Id")
             {
                 table.AddColumn(new TableColumn($"[dodgerblue1]{key}[/]").Centered().NoWrap());
+                columnWidths[key] = maxColWidth;
             }
         }
 
         foreach (var row in data)
         {
-            var rowValues = row.Values.Select(value => value?.ToString() ?? string.Empty).ToArray();
+            var rowValues = row.Values.Select(value => $"  {value?.ToString() ?? string.Empty}  ").ToArray();
 
             if (hasIdColumn)
             {
@@ -56,13 +63,8 @@ public class Display
             }
         }
 
-        int maxWidth = Console.LargestWindowWidth;
-        int maxHeight = Console.LargestWindowHeight;
-        int desiredWidth = Math.Min(200, maxWidth);
-        int desiredHeight = Math.Min(50, maxHeight);
-        Console.SetWindowSize(desiredWidth, desiredHeight);
+        Console.SetWindowSize(Console.LargestWindowWidth, Console.LargestWindowHeight);
 
         AnsiConsole.Write(table.ShowRowSeparators().Border(TableBorder.DoubleEdge));
-        System.Threading.Thread.Sleep(2000);
     }
 }
