@@ -1,8 +1,11 @@
-﻿using Dapper;
+﻿using CsvHelper;
+using Dapper;
 using Microsoft.Data.SqlClient;
 using OfficeOpenXml;
 using System.Data;
 using System.Text;
+using CsvHelper;
+using System.Globalization;
 
 namespace ExcelReader.Model;
 
@@ -62,6 +65,23 @@ public class DataRepository
                     headers.Add(worksheet.Cells[1, col].Text);
                 }
             }
+        }
+
+        return (headers, tableName);
+    }
+
+    public (List<string> headers, string tableName) ExtractHeadersFromCsv(string filePath)
+    {
+        string tableName = Path.GetFileNameWithoutExtension(filePath);
+
+        var headers = new List<string>();
+
+        using (var reader = new StreamReader(filePath))
+        using (var csv = new CsvReader(reader, CultureInfo.InvariantCulture))
+        {
+            csv.Read();
+            csv.ReadHeader();
+            headers = csv.Context.Reader.HeaderRecord.ToList();
         }
 
         return (headers, tableName);
