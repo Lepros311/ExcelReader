@@ -18,18 +18,22 @@ string extension = Path.GetExtension(filePath);
 switch (extension)
 {
     case ".xlsx":
-        var (headers, tableName) = dataRepository.ExtractHeadersFromExcel(filePath);
+        var (ExcelHeaders, ExcelTableName) = dataRepository.ExtractHeadersFromExcel(filePath);
+        var fileName = dataRepository.CreateTable(filePath, ExcelHeaders, ExcelTableName);
+        var ExcelData = dataRepository.ReadExcelData(filePath);
+        dataRepository.SeedData(fileName, ExcelTableName, ExcelData);
+        bool hasIdColumn = dataRepository.CheckIfIdColumnExistsInExcel(filePath);
+        Display.PrintAllData(ExcelTableName, hasIdColumn);
         break;
     case ".csv":
-        var (headers, tableName) = dataRepository.ExtractHeadersFromCsv(filePath);
+        var (CsvHeaders, CsvTableName) = dataRepository.ExtractHeadersFromCsv(filePath);
+        fileName = dataRepository.CreateTable(filePath, CsvHeaders, CsvTableName);
+        var CsvData = dataRepository.ReadCsvData(filePath);
+        dataRepository.SeedData(fileName, CsvTableName, CsvData);
+        hasIdColumn = dataRepository.CheckIfIdColumnExistsInCsv(filePath);
+        Display.PrintAllData(CsvTableName, hasIdColumn);
         break;
     default:
         Console.WriteLine("Unsupported file type.");
         break;
 }
-
-var fileName = dataRepository.CreateTable(filePath, headers, tableName);
-dataRepository.SeedData(fileName, tableName);
-
-bool hasIdColumn = dataRepository.CheckIfIdColumnExistsInExcel(filePath);
-Display.PrintAllData(tableName, hasIdColumn);

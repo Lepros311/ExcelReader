@@ -97,92 +97,115 @@ public class DataRepository
         {
             connection.Open();
 
-            using (var package = new ExcelPackage(new FileInfo(filePath)))
+            // Create the SQL table dynamically
+            var createTableQuery = $"CREATE TABLE [{tableName}] (";
+
+            bool hasIdColumn = headers.Any(header => string.Equals(header, "id", StringComparison.OrdinalIgnoreCase));
+
+            if (hasIdColumn)
             {
-                // Create the SQL table dynamically
-                var createTableQuery = $"CREATE TABLE [{tableName}] (";
+                createTableQuery += "[Id] INT PRIMARY KEY, ";
+            }
+            else
+            {
+                createTableQuery += "Id INT IDENTITY(1,1) PRIMARY KEY, ";
+            }
 
-                bool hasIdColumn = headers.Any(header => string.Equals(header, "id", StringComparison.OrdinalIgnoreCase));
-
-                if (hasIdColumn)
+            foreach (var header in headers)
+            {
+                if (!string.Equals(header, "id", StringComparison.OrdinalIgnoreCase))
                 {
-                    createTableQuery += "[Id] INT PRIMARY KEY, ";
+                    createTableQuery += $"[{header}] NVARCHAR(MAX), "; // Use NVARCHAR(MAX) for flexibility
                 }
-                else
-                {
-                    createTableQuery += "Id INT IDENTITY(1,1) PRIMARY KEY, ";
-                }
+            }
 
-                foreach (var header in headers)
-                {
-                    if (!string.Equals(header, "id", StringComparison.OrdinalIgnoreCase))
-                    {
-                        createTableQuery += $"[{header}] NVARCHAR(MAX), "; // Use NVARCHAR(MAX) for flexibility
-                    }
-                }
+            createTableQuery = createTableQuery.TrimEnd(',', ' ') + ");"; // Remove the last comma and close the statement
 
-                createTableQuery = createTableQuery.TrimEnd(',', ' ') + ");"; // Remove the last comma and close the statement
-
-                // Execute the create table query
-                using (var command = new SqlCommand(createTableQuery, connection))
-                {
-                    command.ExecuteNonQuery();
-                    Console.WriteLine($"Table [{tableName}] created successfully.\n");
-                }
+            // Execute the create table query
+            using (var command = new SqlCommand(createTableQuery, connection))
+            {
+                command.ExecuteNonQuery();
+                Console.WriteLine($"Table [{tableName}] created successfully.\n");
             }
         }
 
         return fileNameWithExtension; // Return the table name
     }
 
-
-    public void SeedData(string fileName, string tableName)
+    public List<Dictionary<string, object>> ReadExcelData(string filePath)
     {
-        string projectRoot = Path.GetFullPath(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, @"..\..\.."));
-        string filePath = Path.Combine(projectRoot, fileName);
+        using (var package = new ExcelPackage(new FileInfo(filePath)))
+        {
+            var worksheet = package.Workbook.Worksheets[0];
+            int rowCount = worksheet.Dimension.Rows;
+            int colCount = worksheet.Dimension.Columns;
 
+            var data = new List<Dictionary<string, object>>();
+            var (headers, _) = ExtractHeadersFromExcel(filePath);
+
+            for (int row = 2; row <= rowCount; row++)
+            {
+                var rowData = new Dictionary<string, object>();
+                for (int col = 1; col <= colCount; col++)
+                {
+                    string header = headers[col - 1];
+                    object value = worksheet.Cells[row, col].Text;
+                    rowData[header] = value;
+                }
+                data.Add(rowData);
+            }
+            return data;
+        }
+    }
+
+    public List<Dictionary<string, object>> ReadCsvData(string filePath)
+    {
+        using (var reader = new StreamReader(filePath))
+        using (var csv = new CsvReader(reader, CultureInfo.InvariantCulture))
+        {
+            var records = csv.GetRecords<dynamic>().ToList();
+            var data = new List<Dictionary<string, object>>();
+
+            foreach (var record in records)
+            {
+                var rowData = new Dictionary<string, object>();
+                foreach (var kvp in (IDictionary<string, object>)record)
+                {
+                    rowData[kvp.Key] = kvp.Value;
+                }
+                data.Add(rowData);
+            }
+            return data;
+        }
+    }
+
+    public void SeedData(string fileName, string tableName, List<Dictionary<string, object>> data)
+    {
         Console.WriteLine($"Populating data from [{fileName}] to [{tableName}] table...");
 
         using (SqlConnection connection = new SqlConnection(_connectionString))
         {
             connection.Open();
 
-            using (var package = new ExcelPackage(new FileInfo(filePath)))
+            foreach (var row in data)
             {
-                var worksheet = package.Workbook.Worksheets[0];
-                int rowCount = worksheet.Dimension.Rows;
-                int columnCount = worksheet.Dimension.Columns;
-
-                var headers = new List<string>();
-                for (int column = 1; column <= columnCount; column++)
+                var parameters = new Dictionary<string, object>();
+                foreach (var kvp in row)
                 {
-                    string header = worksheet.Cells[1, column].Text.Trim();
-                    headers.Add(header);
+                    string cleanParameterName = SanitizeColumnName(kvp.Key);
+                    parameters[cleanParameterName] = kvp.Value;
                 }
 
-                for (int row = 2; row <= rowCount; row++)
-                {
-                    var parameters = new Dictionary<string, object>();
-                    for (int column = 1; column <= columnCount; column++)
-                    {
-                        string header = headers[column - 1];
-                        object value = worksheet.Cells[row, column].Text;
+                var insertColumns = string.Join(", ", row.Keys.Select(h => $"[{h}]"));
+                var insertValues = string.Join(", ", row.Keys.Select(h => $"@{SanitizeColumnName(h)}"));
 
-                        string cleanParameterName = SanitizeColumnName(header);
-                        parameters[cleanParameterName] = value;
-                    }
+                string insertQuery = $"INSERT INTO [{tableName}] ({insertColumns}) VALUES ({insertValues})";
 
-                    var insertColumns = string.Join(", ", headers.Select(h => $"[{h}]"));
-                    var insertValues = string.Join(", ", headers.Select(h => $"@{SanitizeColumnName(h)}"));
-
-                    string insertQuery = $"INSERT INTO [{tableName}] ({insertColumns}) VALUES ({insertValues})";
-
-                    connection.Execute(insertQuery, parameters);
-                }
+                connection.Execute(insertQuery, parameters);
             }
         }
 
-        Console.WriteLine($"Data populated from [{fileName}] to [{tableName}] table.\n");
+        Console.WriteLine($"Data populated to [{tableName}] table.\n");
     }
 
     private string SanitizeColumnName(string columnName)
@@ -249,23 +272,41 @@ public class DataRepository
 
     public bool CheckIfIdColumnExistsInExcel(string filePath)
     {
-        // Ensure the Excel package is disposed properly
         using (var package = new ExcelPackage(new FileInfo(filePath)))
         {
-            // Get the first worksheet
             var worksheet = package.Workbook.Worksheets[0];
-            // Get the first row (header row)
+
             var headerRow = worksheet.Cells[1, 1, 1, worksheet.Dimension.End.Column];
-            // Check if "Id" exists in the header row
+
             foreach (var cell in headerRow)
             {
                 if (cell.Text.Equals("Id", StringComparison.OrdinalIgnoreCase))
                 {
-                    return true; // "Id" column exists
+                    return true;
                 }
             }
         }
-        return false; // "Id" column does not exist
-
+        return false;
     }
+
+    public bool CheckIfIdColumnExistsInCsv(string filePath)
+    {
+        using (var reader = new StreamReader(filePath))
+        using (var csv = new CsvReader(reader, CultureInfo.InvariantCulture))
+        {
+            csv.Read();
+            csv.ReadHeader();
+            var headerRecord = csv.Context.Reader.HeaderRecord;
+
+            foreach (var header in headerRecord)
+            {
+                if (header.Equals("Id", StringComparison.OrdinalIgnoreCase))
+                {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
 }
