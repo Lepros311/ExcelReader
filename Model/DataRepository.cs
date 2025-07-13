@@ -41,12 +41,11 @@ public class DataRepository
         }
     }
 
-    public (string tableName, string fileName) CreateTableFromExcel(string filePath)
+    public (List<string> headers, string tableName) ExtractHeadersFromExcel(string filePath)
     {
         string tableName = Path.GetFileNameWithoutExtension(filePath); // Get the file name without extension
-        string fileNameWithExtension = Path.GetFileName(filePath);
 
-        Console.WriteLine($"Creating [{tableName}] table...");
+        var headers = new List<string>();
 
         using (SqlConnection connection = new SqlConnection(_connectionString))
         {
@@ -58,12 +57,28 @@ public class DataRepository
                 int colCount = worksheet.Dimension.Columns;
 
                 // Read the header row
-                var headers = new List<string>();
                 for (int col = 1; col <= colCount; col++)
                 {
                     headers.Add(worksheet.Cells[1, col].Text);
                 }
+            }
+        }
 
+        return (headers, tableName);
+    }
+
+    public string CreateTable(string filePath, List<string> headers, string tableName)
+    {
+        string fileNameWithExtension = Path.GetFileName(filePath);
+
+        Console.WriteLine($"Creating [{tableName}] table...");
+
+        using (SqlConnection connection = new SqlConnection(_connectionString))
+        {
+            connection.Open();
+
+            using (var package = new ExcelPackage(new FileInfo(filePath)))
+            {
                 // Create the SQL table dynamically
                 var createTableQuery = $"CREATE TABLE [{tableName}] (";
 
@@ -97,7 +112,7 @@ public class DataRepository
             }
         }
 
-        return (tableName, fileNameWithExtension); // Return the table name
+        return fileNameWithExtension; // Return the table name
     }
 
 

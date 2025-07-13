@@ -13,7 +13,9 @@ dataRepository.RecreateDatabase();
 var userInterface = new UserInterface();
 string filePath = userInterface.GetFilePath();
 
-var (tableName, fileName) = dataRepository.CreateTableFromExcel(filePath);
+var (headers, tableName) = dataRepository.ExtractHeadersFromExcel(filePath);
+
+var fileName = dataRepository.CreateTable(filePath, headers, tableName);
 dataRepository.SeedData(fileName, tableName);
 
 bool hasIdColumn = dataRepository.CheckIfIdColumnExistsInExcel(filePath);
