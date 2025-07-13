@@ -4,7 +4,7 @@ public class UserInterface
 {
     public string GetFilePath()
     {
-        Console.WriteLine("Please enter the full path of the Excel file (e.g., C:\\path\\to\\your\\file.xlsx):");
+        Console.WriteLine("Please enter the full path of the Excel, CSV, or PDF file (e.g., C:\\path\\to\\your\\file.xlsx [or .csv or .pdf]):");
         string filePath = Console.ReadLine();
 
         Console.WriteLine("\nLooking for the file at: " + filePath + "...");

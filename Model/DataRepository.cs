@@ -3,9 +3,8 @@ using Dapper;
 using Microsoft.Data.SqlClient;
 using OfficeOpenXml;
 using System.Data;
-using System.Text;
-using CsvHelper;
 using System.Globalization;
+using System.Text;
 
 namespace ExcelReader.Model;
 
