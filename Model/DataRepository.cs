@@ -1,5 +1,7 @@
 ﻿using CsvHelper;
 using Dapper;
+using iText.Forms;
+using iText.Kernel.Pdf;
 using Microsoft.Data.SqlClient;
 using OfficeOpenXml;
 using System.Data;
@@ -67,6 +69,26 @@ public class DataRepository
         }
 
         return (headers, tableName);
+    }
+
+    public (List<string> headers, string tableName) ExtractFieldNamesFromPdf(string filePath)
+    {
+        string tableName = Path.GetFileNameWithoutExtension(filePath);
+        var fieldNames = new List<string>();
+
+        using (PdfReader pdfReader = new PdfReader(filePath))
+        using (PdfDocument pdfDocument = new PdfDocument(pdfReader))
+        {
+            PdfAcroForm form = PdfAcroForm.GetAcroForm(pdfDocument, true);
+            var fields = form.GetAllFormFields();
+
+            foreach (var field in fields)
+            {
+                fieldNames.Add(field.Key);
+            }
+        }
+
+        return (fieldNames, tableName);
     }
 
     public (List<string> headers, string tableName) ExtractHeadersFromCsv(string filePath)
@@ -155,6 +177,39 @@ public class DataRepository
             }
             return data;
         }
+    }
+
+    public List<Dictionary<string, object>> ReadPdfData(string filePath)
+    {
+        var data = new List<Dictionary<string, object>>();
+
+        using (PdfReader pdfReader = new PdfReader(filePath))
+        using (PdfDocument pdfDocument = new PdfDocument(pdfReader))
+        {
+            PdfAcroForm form = PdfAcroForm.GetAcroForm(pdfDocument, true);
+            var fields = form.GetAllFormFields();
+
+            var rowData = new Dictionary<string, object>();
+
+            foreach (var field in fields)
+            {
+                string fieldName = field.Key;
+                object fieldValue = field.Value.GetValue();
+
+                if (fieldValue is PdfString pdfString)
+                {
+                    rowData[fieldName] = pdfString.GetValue();
+                }
+                else
+                {
+                    rowData[fieldName] = fieldValue;
+                }
+            }
+
+            data.Add(rowData);
+        }
+
+        return data;
     }
 
     public List<Dictionary<string, object>> ReadCsvData(string filePath)

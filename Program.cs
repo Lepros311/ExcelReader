@@ -18,20 +18,27 @@ string extension = Path.GetExtension(filePath);
 switch (extension)
 {
     case ".xlsx":
-        var (ExcelHeaders, ExcelTableName) = dataRepository.ExtractHeadersFromExcel(filePath);
-        var fileName = dataRepository.CreateTable(filePath, ExcelHeaders, ExcelTableName);
-        var ExcelData = dataRepository.ReadExcelData(filePath);
-        dataRepository.SeedData(fileName, ExcelTableName, ExcelData);
+        var (excelHeaders, excelTableName) = dataRepository.ExtractHeadersFromExcel(filePath);
+        var fileName = dataRepository.CreateTable(filePath, excelHeaders, excelTableName);
+        var excelData = dataRepository.ReadExcelData(filePath);
+        dataRepository.SeedData(fileName, excelTableName, excelData);
         bool hasIdColumn = dataRepository.CheckIfIdColumnExistsInExcel(filePath);
-        Display.PrintAllData(ExcelTableName, hasIdColumn);
+        Display.PrintAllData(excelTableName, hasIdColumn);
         break;
     case ".csv":
-        var (CsvHeaders, CsvTableName) = dataRepository.ExtractHeadersFromCsv(filePath);
-        fileName = dataRepository.CreateTable(filePath, CsvHeaders, CsvTableName);
-        var CsvData = dataRepository.ReadCsvData(filePath);
-        dataRepository.SeedData(fileName, CsvTableName, CsvData);
+        var (csvHeaders, csvTableName) = dataRepository.ExtractHeadersFromCsv(filePath);
+        fileName = dataRepository.CreateTable(filePath, csvHeaders, csvTableName);
+        var csvData = dataRepository.ReadCsvData(filePath);
+        dataRepository.SeedData(fileName, csvTableName, csvData);
         hasIdColumn = dataRepository.CheckIfIdColumnExistsInCsv(filePath);
-        Display.PrintAllData(CsvTableName, hasIdColumn);
+        Display.PrintAllData(csvTableName, hasIdColumn);
+        break;
+    case ".pdf":
+        var (pdfFields, pdfTableName) = dataRepository.ExtractFieldNamesFromPdf(filePath);
+        fileName = dataRepository.CreateTable(filePath, pdfFields, pdfTableName);
+        var pdfData = dataRepository.ReadPdfData(filePath);
+        dataRepository.SeedData(fileName, pdfTableName, pdfData);
+        Display.PrintAllData(pdfTableName, false);
         break;
     default:
         Console.WriteLine("Unsupported file type.");
