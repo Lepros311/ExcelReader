@@ -1,5 +1,6 @@
 ﻿using ExcelReader.Model;
 using Spectre.Console;
+using System.Diagnostics;
 
 namespace ExcelReader.View;
 
@@ -66,5 +67,10 @@ public class Display
         Console.SetWindowSize(Console.LargestWindowWidth, Console.LargestWindowHeight);
 
         AnsiConsole.Write(table.ShowRowSeparators().Border(TableBorder.DoubleEdge));
+    }
+
+    public static void OpenFileInExternalProgram(string filePath)
+    {
+        Process.Start(new ProcessStartInfo { FileName = filePath, UseShellExecute = true });
     }
 }

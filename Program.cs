@@ -24,6 +24,9 @@ switch (extension)
         dataRepository.SeedData(fileName, excelTableName, excelData);
         bool hasIdColumn = dataRepository.CheckIfIdColumnExistsInExcel(filePath);
         Display.PrintAllData(excelTableName, hasIdColumn);
+        bool externalOpen = userInterface.PromptForExternalOpen(extension);
+        if (externalOpen)
+            Display.OpenFileInExternalProgram(filePath);
         break;
     case ".csv":
         var (csvHeaders, csvTableName) = dataRepository.ExtractHeadersFromCsv(filePath);
@@ -32,6 +35,9 @@ switch (extension)
         dataRepository.SeedData(fileName, csvTableName, csvData);
         hasIdColumn = dataRepository.CheckIfIdColumnExistsInCsv(filePath);
         Display.PrintAllData(csvTableName, hasIdColumn);
+        externalOpen = userInterface.PromptForExternalOpen(extension);
+        if (externalOpen)
+            Display.OpenFileInExternalProgram(filePath);
         break;
     case ".pdf":
         var (pdfFields, pdfTableName) = dataRepository.ExtractFieldNamesFromPdf(filePath);
@@ -39,7 +45,9 @@ switch (extension)
         var pdfData = dataRepository.ReadPdfData(filePath);
         dataRepository.SeedData(fileName, pdfTableName, pdfData);
         Display.PrintAllData(pdfTableName, false);
-        userInterface.PromptForExternalOpen(extension);
+        externalOpen = userInterface.PromptForExternalOpen(extension);
+        if (externalOpen)
+            Display.OpenFileInExternalProgram(filePath);
         break;
     default:
         Console.WriteLine("Unsupported file type.");
