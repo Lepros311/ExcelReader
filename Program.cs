@@ -39,6 +39,7 @@ switch (extension)
         var pdfData = dataRepository.ReadPdfData(filePath);
         dataRepository.SeedData(fileName, pdfTableName, pdfData);
         Display.PrintAllData(pdfTableName, false);
+        userInterface.PromptForExternalOpen(extension);
         break;
     default:
         Console.WriteLine("Unsupported file type.");

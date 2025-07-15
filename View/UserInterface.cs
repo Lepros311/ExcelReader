@@ -1,4 +1,6 @@
-﻿namespace ExcelReader.View;
+﻿using Spectre.Console;
+
+namespace ExcelReader.View;
 
 public class UserInterface
 {
@@ -19,5 +21,12 @@ public class UserInterface
         Console.WriteLine("File found.\n");
 
         return filePath;
+    }
+
+    public bool PromptForExternalOpen(string fileExtension)
+    {
+        bool externalOpen = AnsiConsole.Ask<bool>($"Would you like to open this file in your system's default {fileExtension} program?", false);
+
+        return externalOpen;
     }
 }
