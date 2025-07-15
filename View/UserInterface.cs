@@ -1,4 +1,5 @@
-﻿using Spectre.Console;
+﻿using ExcelReader.Model;
+using Spectre.Console;
 
 namespace ExcelReader.View;
 
@@ -29,5 +30,27 @@ public class UserInterface
         bool externalOpen = AnsiConsole.Confirm($"Would you like to open this file in your system's default {fileExtension} program?", false);
 
         return externalOpen;
+    }
+
+    public int PromptForRow()
+    {
+        bool isValidInput;
+        string? userInput;
+        int rowChoice;
+        var dataRepository = new DataRepository(DatabaseUtility.GetConnectionString());
+        int rowCount = dataRepository.GetExcelRowCount()
+
+        do
+        {
+            isValidInput = false;
+            Console.Write("Which row do you want to update? ");
+            userInput = Console.ReadLine();
+            if ((int.TryParse(userInput, out rowChoice)) && (Array.IndexOf(rowNumbers, Convert.ToInt32(userInput)) >= 0))
+                isValidInput = true;
+            else
+                Console.WriteLine("Invalid input. Try again.");
+        } while (isValidInput == false);
+
+        return rowChoice;
     }
 }

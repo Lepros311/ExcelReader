@@ -47,7 +47,7 @@ public class DataRepository
 
     public (List<string> headers, string tableName) ExtractHeadersFromExcel(string filePath)
     {
-        string tableName = Path.GetFileNameWithoutExtension(filePath); // Get the file name without extension
+        string tableName = Path.GetFileNameWithoutExtension(filePath);
 
         var headers = new List<string>();
 
@@ -60,7 +60,6 @@ public class DataRepository
                 var worksheet = package.Workbook.Worksheets[0];
                 int colCount = worksheet.Dimension.Columns;
 
-                // Read the header row
                 for (int col = 1; col <= colCount; col++)
                 {
                     headers.Add(worksheet.Cells[1, col].Text);
@@ -118,7 +117,6 @@ public class DataRepository
         {
             connection.Open();
 
-            // Create the SQL table dynamically
             var createTableQuery = $"CREATE TABLE [{tableName}] (";
 
             bool hasIdColumn = headers.Any(header => string.Equals(header, "id", StringComparison.OrdinalIgnoreCase));
@@ -136,13 +134,12 @@ public class DataRepository
             {
                 if (!string.Equals(header, "id", StringComparison.OrdinalIgnoreCase))
                 {
-                    createTableQuery += $"[{header}] NVARCHAR(MAX), "; // Use NVARCHAR(MAX) for flexibility
+                    createTableQuery += $"[{header}] NVARCHAR(MAX), ";
                 }
             }
 
-            createTableQuery = createTableQuery.TrimEnd(',', ' ') + ");"; // Remove the last comma and close the statement
+            createTableQuery = createTableQuery.TrimEnd(',', ' ') + ");";
 
-            // Execute the create table query
             using (var command = new SqlCommand(createTableQuery, connection))
             {
                 command.ExecuteNonQuery();
@@ -150,7 +147,7 @@ public class DataRepository
             }
         }
 
-        return fileNameWithExtension; // Return the table name
+        return fileNameWithExtension;
     }
 
     public List<Dictionary<string, object>> ReadExcelData(string filePath)
@@ -264,28 +261,23 @@ public class DataRepository
 
     private string SanitizeColumnName(string columnName)
     {
-        // Use a StringBuilder to construct the sanitized name
         var sanitized = new StringBuilder();
 
-        // Loop through each character in the column name
         foreach (char c in columnName)
         {
-            // Check if the character is a letter, digit, or underscore
             if (char.IsLetterOrDigit(c) || c == '_')
             {
                 sanitized.Append(c);
             }
             else if (c == ' ')
             {
-                // Replace spaces with an underscore
                 sanitized.Append('_');
             }
         }
 
-        // Ensure the name does not start with a digit
         if (sanitized.Length > 0 && char.IsDigit(sanitized[0]))
         {
-            sanitized.Insert(0, '_'); // Prepend an underscore if it starts with a digit
+            sanitized.Insert(0, '_');
         }
 
         return sanitized.ToString();
@@ -362,5 +354,19 @@ public class DataRepository
         }
         return false;
     }
+
+
+    public int GetExcelRowCount(string filePath)
+    {
+        using (var package = new ExcelPackage(new FileInfo(filePath)))
+        {
+            var worksheet = package.Workbook.Worksheets[0];
+            int rowCount = worksheet.Dimension.Rows;
+
+            return rowCount > 1 ? rowCount - 1 : 0;
+        }
+    }
+
+
 
 }
