@@ -1,4 +1,5 @@
-﻿using ExcelReader.Model;
+﻿using DocumentFormat.OpenXml.Spreadsheet;
+using ExcelReader.Model;
 
 namespace ExcelReader.Controller;
 
@@ -26,5 +27,15 @@ public class DataController
     public void UpdatePdf(string filePath, Dictionary<string, object> data)
     {
         _dataRepository.UpdatePdfData(filePath, data);
+    }
+
+    public List<Dictionary<string, object>> AddRowsColumn(List<Dictionary<string, object>> data)
+    {
+        List<Dictionary<string, object>> dataWithRowsColumn = new List<Dictionary<string, object>>();
+
+        for (int i  = 0; i < data.Count; i++)
+        {
+            var dataWithRow = 
+        }
     }
 }
