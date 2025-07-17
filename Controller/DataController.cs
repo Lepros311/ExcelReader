@@ -1,5 +1,6 @@
-﻿using DocumentFormat.OpenXml.Spreadsheet;
-using ExcelReader.Model;
+﻿using ExcelReader.Model;
+using ExcelReader.View;
+using Spectre.Console;
 
 namespace ExcelReader.Controller;
 
@@ -12,30 +13,23 @@ public class DataController
         _dataRepository = dataRepository;
     }
 
-    public void UpdateExcel(string filePath, List<Dictionary<string, object>> data)
+    public void UpdatePdf(string filePath, string tableName, List<Dictionary<string, object>> data)
     {
-        _dataRepository.UpdateExcelData(filePath, data);
+        var userInterface = new ExcelReader.View.UserInterface();
+        var field = userInterface.PromptForField(data);
 
-        
-    }
+        var currentRow = data[0];
+        var currentValue = currentRow[field];
 
-    public void UpdateCsv(string filePath, Dictionary<string, object> data)
-    {
-        _dataRepository.UpdateCsvData(filePath, data);
-    }
+        Console.WriteLine($"{field}'s current value: {currentValue}\n");
+        var newValue = AnsiConsole.Ask<string>($"{field}'s new value:");
 
-    public void UpdatePdf(string filePath, Dictionary<string, object> data)
-    {
-        _dataRepository.UpdatePdfData(filePath, data);
-    }
+        var updatedKvp = new Dictionary<string, object> { { field, newValue } };
 
-    public List<Dictionary<string, object>> AddRowsColumn(List<Dictionary<string, object>> data)
-    {
-        List<Dictionary<string, object>> dataWithRowsColumn = new List<Dictionary<string, object>>();
+        _dataRepository.UpdatePdfData(filePath, updatedKvp);
+        _dataRepository.UpdateDb(updatedKvp, tableName);
 
-        for (int i  = 0; i < data.Count; i++)
-        {
-            var dataWithRow = 
-        }
+        Console.WriteLine("\nPDF updated successfully!\n");
+
     }
 }

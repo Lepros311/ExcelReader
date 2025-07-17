@@ -1,4 +1,5 @@
-﻿using ExcelReader.Model;
+﻿using ExcelReader.Controller;
+using ExcelReader.Model;
 using ExcelReader.View;
 using OfficeOpenXml;
 
@@ -7,7 +8,6 @@ Console.Title = "Excel Reader";
 ExcelPackage.License.SetNonCommercialPersonal("Andrew");
 
 var dataRepository = new DataRepository(DatabaseUtility.GetConnectionString());
-
 dataRepository.RecreateDatabase();
 
 var userInterface = new UserInterface();
@@ -44,7 +44,16 @@ switch (extension)
         fileName = dataRepository.CreateTable(filePath, pdfFields, pdfTableName);
         var pdfData = dataRepository.ReadPdfData(filePath);
         dataRepository.SeedData(fileName, pdfTableName, pdfData);
+        Console.WriteLine("Gathering data for display...\n");
         Display.PrintAllData(pdfTableName, false);
+        var editPdf = userInterface.PromptForPdfEdit();
+        var dataController = new DataController(dataRepository);
+        var data = dataRepository.GetAllData(pdfTableName);
+        if (editPdf)
+        {
+            dataController.UpdatePdf(filePath, pdfTableName, data);
+            Display.PrintAllData(pdfTableName, false);
+        }
         externalOpen = userInterface.PromptForExternalOpen(extension);
         if (externalOpen)
             Display.OpenFileInExternalProgram(filePath);

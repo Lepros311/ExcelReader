@@ -26,10 +26,6 @@ public class Display
 
         var columnWidths = new Dictionary<string, int>();
 
-        DataController controller = new DataController(repository);
-
-        List<Dictionary<string, object>> dataWithRowsColumn = controller.AddRowsColumn(data);
-
         foreach (var key in data[0].Keys)
         {
             string header = key;
@@ -51,11 +47,6 @@ public class Display
                 table.AddColumn(new TableColumn($"[dodgerblue1]{key}[/]").Centered().NoWrap());
                 columnWidths[key] = maxColWidth;
             }
-        }
-
-        for (int i  = 0; i < data.Count; i++)
-        {
-            data[i].Add("Row", i + 1);
         }
 
         foreach (var row in data)

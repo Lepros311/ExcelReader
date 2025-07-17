@@ -286,8 +286,6 @@ public class DataRepository
 
     public List<Dictionary<string, object>> GetAllData(string tableName)
     {
-        Console.WriteLine("Gathering data for display...\n");
-
         var data = new List<Dictionary<string, object>>();
 
         using (SqlConnection connection = new SqlConnection(_connectionString))
@@ -355,18 +353,49 @@ public class DataRepository
         return false;
     }
 
-
-    public int GetExcelRowCount(string filePath)
+    public void UpdatePdfData(string filePath, Dictionary<string, object> updatedValues)
     {
-        using (var package = new ExcelPackage(new FileInfo(filePath)))
-        {
-            var worksheet = package.Workbook.Worksheets[0];
-            int rowCount = worksheet.Dimension.Rows;
+        string tempFilePath = Path.Combine(Path.GetDirectoryName(filePath), Path.GetFileNameWithoutExtension(filePath) + "_temp.pdf");
 
-            return rowCount > 1 ? rowCount - 1 : 0;
+        using (PdfReader pdfReader = new PdfReader(filePath))
+        using (PdfWriter pdfWriter = new PdfWriter(tempFilePath))
+        using (PdfDocument pdfDocument = new PdfDocument(pdfReader, pdfWriter))
+        {
+            PdfAcroForm form = PdfAcroForm.GetAcroForm(pdfDocument, true);
+            var fields = form.GetAllFormFields();
+
+            foreach (var updatedValue in updatedValues)
+            {
+                if (fields.ContainsKey(updatedValue.Key))
+                {
+                    var field = fields[updatedValue.Key];
+                    field.SetValue(updatedValue.Value.ToString());
+                }
+            }
         }
+
+        File.Delete(filePath);
+        File.Move(tempFilePath, filePath);
     }
 
+    public void UpdateDb(Dictionary<string, object> updatedKvp, string tableName)
+    {
+        using (var connection = new SqlConnection(DatabaseUtility.GetConnectionString()))
+        {
+            connection.Open();
 
+            var column = updatedKvp.Keys.FirstOrDefault();
+            var newValue = updatedKvp[column];
 
+            string updateQuery = $"UPDATE [{tableName}] SET [{column}] = @newValue WHERE Id = 1";
+
+            using (var command = connection.CreateCommand())
+            {
+                command.CommandText = updateQuery;
+                command.Parameters.AddWithValue("@newValue", newValue);
+
+                command.ExecuteNonQuery();
+            }
+        }
+    }
 }
