@@ -107,34 +107,40 @@ public class DataRepository
         return (headers, tableName);
     }
 
-    public string CreateTable(string filePath, List<string> headers, string tableName)
+    public Dictionary<string, string> CreateTable(List<string> headers, string tableName)
     {
-        string fileNameWithExtension = Path.GetFileName(filePath);
-
         Console.WriteLine($"Creating [{tableName}] table...");
+
+        var columnMapping = new Dictionary<string, string>();
 
         using (SqlConnection connection = new SqlConnection(_connectionString))
         {
             connection.Open();
 
             var createTableQuery = $"CREATE TABLE [{tableName}] (";
+            var existingColumnNames = new HashSet<string>();
 
             bool hasIdColumn = headers.Any(header => string.Equals(header, "id", StringComparison.OrdinalIgnoreCase));
 
             if (hasIdColumn)
             {
                 createTableQuery += "[Id] INT PRIMARY KEY, ";
+                columnMapping["Id"] = "Id";
             }
             else
             {
                 createTableQuery += "Id INT IDENTITY(1,1) PRIMARY KEY, ";
+                columnMapping["Id"] = "Id";
             }
 
             foreach (var header in headers)
             {
                 if (!string.Equals(header, "id", StringComparison.OrdinalIgnoreCase))
                 {
-                    createTableQuery += $"[{header}] NVARCHAR(MAX), ";
+                    string sanitizedHeader = SanitizeColumnName(header, existingColumnNames);
+                    Console.WriteLine(sanitizedHeader);
+                    createTableQuery += $"[{sanitizedHeader}] NVARCHAR(MAX), ";
+                    columnMapping[header] = sanitizedHeader;
                 }
             }
 
@@ -147,7 +153,7 @@ public class DataRepository
             }
         }
 
-        return fileNameWithExtension;
+        return columnMapping;
     }
 
     public List<Dictionary<string, object>> ReadExcelData(string filePath)
@@ -230,7 +236,7 @@ public class DataRepository
         }
     }
 
-    public void SeedData(string fileName, string tableName, List<Dictionary<string, object>> data)
+    public void SeedData(string fileName, string tableName, List<Dictionary<string, object>> data, Dictionary<string, string> columnMapping)
     {
         Console.WriteLine($"Populating data from [{fileName}] to [{tableName}] table...");
 
@@ -241,25 +247,70 @@ public class DataRepository
             foreach (var row in data)
             {
                 var parameters = new Dictionary<string, object>();
-                foreach (var kvp in row)
+
+                if (row.ContainsKey("Id"))
                 {
-                    string cleanParameterName = SanitizeColumnName(kvp.Key);
-                    parameters[cleanParameterName] = kvp.Value;
+                    parameters["Id"] = row["Id"];
                 }
 
-                var insertColumns = string.Join(", ", row.Keys.Select(h => $"[{h}]"));
-                var insertValues = string.Join(", ", row.Keys.Select(h => $"@{SanitizeColumnName(h)}"));
+                foreach (var kvp in row)
+                {
+                    if (columnMapping.TryGetValue(kvp.Key, out string cleanParameterName))
+                    {
+                        parameters[cleanParameterName] = kvp.Value;
+                    }
+                    else
+                    {
+                        Console.WriteLine($"Warning: Key '{kvp.Key} not found in column mapping.");
+                    }
+                }
 
-                string insertQuery = $"INSERT INTO [{tableName}] ({insertColumns}) VALUES ({insertValues})";
+                var insertColumns = new List<string>();
+                var insertValues = new List<string>();
+              
+                //var insertColumns = string.Join(", ", columnMapping.Keys.Select(h => $"[{h}]"));
+                //var insertValues = string.Join(", ", columnMapping.Keys.Select(h => $"@{columnMapping.FirstOrDefault(x => x.Value == h).Key}"));
 
-                connection.Execute(insertQuery, parameters);
+                foreach (var kvp in columnMapping)
+                {
+                    if (row.ContainsKey(kvp.Key))
+                    {
+                        insertColumns.Add($"[{kvp.Value}]");
+                        insertValues.Add($"@{kvp.Value}");
+                    }
+                }
+
+                if (!row.ContainsKey("Id") && columnMapping.ContainsKey("Id"))
+                {
+                    insertColumns.Remove($"[Id]");
+                    insertValues.Remove($"@Id");
+                }
+
+                string insertQuery = $"INSERT INTO [{tableName}] ({string.Join(", ", insertColumns)}) VALUES ({string.Join(", ", insertValues)})";
+
+                Console.WriteLine($"Insert Query: {insertQuery}");
+                Console.WriteLine("Parameters:");
+                foreach (var param in parameters)
+                {
+                    Console.WriteLine($"  {param.Key}: {param.Value}");
+                }
+
+                using (var command = new SqlCommand(insertQuery, connection))
+                {
+                    foreach (var param in parameters)
+                    {
+                        command.Parameters.AddWithValue($"@{param.Key}", param.Value);
+                    }
+
+                    command.ExecuteNonQuery();
+                }
             }
         }
 
         Console.WriteLine($"Data populated to [{tableName}] table.\n");
     }
 
-    private string SanitizeColumnName(string columnName)
+    private string SanitizeColumnName(string columnName, HashSet<string> existingColumnNames)
     {
         var sanitized = new StringBuilder();
 
@@ -273,6 +324,10 @@ public class DataRepository
             {
                 sanitized.Append('_');
             }
+            else
+            {
+                continue;
+            }
         }
 
         if (sanitized.Length > 0 && char.IsDigit(sanitized[0]))
@@ -280,7 +335,37 @@ public class DataRepository
             sanitized.Insert(0, '_');
         }
 
-        return sanitized.ToString();
+        if (sanitized.Length > 128)
+        {
+            sanitized.Length = 128;
+        }
+
+        var reservedKeywords = new HashSet<string>
+        {
+            "SELECT", "INSERT", "UPDATE", "DELETE", "FROM", "WHERE", "TABLE", "COLUMN", "DATABASE"
+        };
+
+        string sanitizedStringColName = sanitized.ToString();
+        if (reservedKeywords.Contains(sanitizedStringColName.ToUpper()))
+        {
+            sanitizedStringColName = "_" + sanitizedStringColName;
+        }
+
+        if (string.IsNullOrEmpty(sanitizedStringColName))
+        {
+            sanitizedStringColName = "Unknown";
+        }
+
+        string uniqueColumnName = sanitizedStringColName;
+        int counter = 1;
+        while (existingColumnNames.Contains(uniqueColumnName))
+        {
+            uniqueColumnName = $"{sanitizedStringColName}_{counter++}";
+        }
+
+        existingColumnNames.Add(uniqueColumnName);
+
+        return uniqueColumnName;
     }
 
 

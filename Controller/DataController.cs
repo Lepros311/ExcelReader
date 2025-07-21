@@ -1,5 +1,4 @@
 ﻿using ExcelReader.Model;
-using ExcelReader.View;
 using Spectre.Console;
 
 namespace ExcelReader.Controller;
@@ -30,6 +29,5 @@ public class DataController
         _dataRepository.UpdateDb(updatedKvp, tableName);
 
         Console.WriteLine("\nPDF updated successfully!\n");
-
     }
 }

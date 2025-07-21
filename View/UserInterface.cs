@@ -1,5 +1,4 @@
-﻿using ExcelReader.Model;
-using Spectre.Console;
+﻿using Spectre.Console;
 
 namespace ExcelReader.View;
 
@@ -7,10 +6,22 @@ public class UserInterface
 {
     public string GetFilePath()
     {
-        Console.WriteLine("Please enter the full path of the Excel, CSV, or PDF file (e.g., C:\\path\\to\\your\\file.xlsx [or .csv or .pdf]):");
-        string filePath = Console.ReadLine();
+        string[] supportedExtensions = { ".xlsx", ".csv", ".pdf" };
+        string filePath;
 
-        Console.WriteLine("\nLooking for the file at: " + filePath + "...");
+        do
+        {
+            Console.WriteLine("Please enter the full path of the Excel, CSV, or PDF file (e.g., C:\\path\\to\\your\\file.xlsx [or .csv or .pdf]):");
+            filePath = Console.ReadLine();
+
+            if (!supportedExtensions.Contains(Path.GetExtension(filePath).ToLower()))
+            {
+                Console.WriteLine("Unsupported file type. Please enter a valid Excel, CSV, or PDF file.\n");
+                continue;
+            }
+
+            Console.WriteLine("\nLooking for the file at: " + filePath + "...");
+        }while (!File.Exists(filePath));
 
         while (!File.Exists(filePath))
         {
