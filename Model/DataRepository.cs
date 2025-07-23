@@ -113,43 +113,54 @@ public class DataRepository
 
         var columnMapping = new Dictionary<string, string>();
 
-        using (SqlConnection connection = new SqlConnection(_connectionString))
+        try
         {
-            connection.Open();
-
-            var createTableQuery = $"CREATE TABLE [{tableName}] (";
-            var existingColumnNames = new HashSet<string>();
-
-            string idColumnName = headers.FirstOrDefault(header => string.Equals(header, "id", StringComparison.OrdinalIgnoreCase));
-
-            if (idColumnName != null)
+            using (SqlConnection connection = new SqlConnection(_connectionString))
             {
-                createTableQuery += "[Id] INT PRIMARY KEY, ";
-                columnMapping[idColumnName] = "Id";
-            }
-            else
-            {
-                createTableQuery += "Id INT IDENTITY(1,1) PRIMARY KEY, ";
-                columnMapping["Id"] = "Id";
-            }
+                connection.Open();
 
-            foreach (var header in headers)
-            {
-                if (!string.Equals(header, "id", StringComparison.OrdinalIgnoreCase))
+                var createTableQuery = $"CREATE TABLE [{tableName}] (";
+                var existingColumnNames = new HashSet<string>();
+
+                string idColumnName = headers.FirstOrDefault(header => string.Equals(header, "id", StringComparison.OrdinalIgnoreCase));
+
+                if (idColumnName != null)
                 {
-                    string sanitizedHeader = SanitizeColumnName(header, existingColumnNames);
-                    createTableQuery += $"[{sanitizedHeader}] NVARCHAR(MAX), ";
-                    columnMapping[header] = sanitizedHeader;
+                    createTableQuery += "[Id] INT PRIMARY KEY, ";
+                    columnMapping[idColumnName] = "Id";
+                }
+                else
+                {
+                    createTableQuery += "Id INT IDENTITY(1,1) PRIMARY KEY, ";
+                    columnMapping["Id"] = "Id";
+                }
+
+                foreach (var header in headers)
+                {
+                    if (!string.Equals(header, "id", StringComparison.OrdinalIgnoreCase))
+                    {
+                        string sanitizedHeader = SanitizeColumnName(header, existingColumnNames);
+                        createTableQuery += $"[{sanitizedHeader}] NVARCHAR(MAX), ";
+                        columnMapping[header] = sanitizedHeader;
+                    }
+                }
+
+                createTableQuery = createTableQuery.TrimEnd(',', ' ') + ");";
+
+                using (var command = new SqlCommand(createTableQuery, connection))
+                {
+                    command.ExecuteNonQuery();
+                    Console.WriteLine($"Table [{tableName}] created successfully.\n");
                 }
             }
-
-            createTableQuery = createTableQuery.TrimEnd(',', ' ') + ");";
-
-            using (var command = new SqlCommand(createTableQuery, connection))
-            {
-                command.ExecuteNonQuery();
-                Console.WriteLine($"Table [{tableName}] created successfully.\n");
-            }
+        }
+        catch (SqlException ex)
+        {
+            Console.WriteLine($"SQL error occurred while creating table [{tableName}]: {ex.Message}");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"An error occurred while creating table [{tableName}]: {ex.Message}");
         }
 
         return columnMapping;
@@ -239,64 +250,75 @@ public class DataRepository
     {
         Console.WriteLine($"Populating data from [{fileName}] to [{tableName}] table...");
 
-        using (SqlConnection connection = new SqlConnection(_connectionString))
+        try
         {
-            connection.Open();
-
-            foreach (var row in data)
+            using (SqlConnection connection = new SqlConnection(_connectionString))
             {
-                var parameters = new Dictionary<string, object>();
+                connection.Open();
 
-                if (row.Keys.Any(key => string.Equals(key, "id", StringComparison.OrdinalIgnoreCase)))
+                foreach (var row in data)
                 {
-                    parameters["Id"] = row.First(kvp => string.Equals(kvp.Key, "id", StringComparison.OrdinalIgnoreCase)).Value;
-                }
+                    var parameters = new Dictionary<string, object>();
 
-                foreach (var kvp in row)
-                {
-                    if (columnMapping.TryGetValue(kvp.Key, out string cleanParameterName))
+                    if (row.Keys.Any(key => string.Equals(key, "id", StringComparison.OrdinalIgnoreCase)))
                     {
-                        parameters[cleanParameterName] = kvp.Value ?? DBNull.Value;
-                    }
-                    else
-                    {
-                        Console.WriteLine($"Warning: Key '{kvp.Key}' not found in column mapping.");
-                    }
-                }
-
-                var insertColumns = new List<string>();
-                var insertValues = new List<string>();
-
-                foreach (var kvp in columnMapping)
-                {
-                    if (row.ContainsKey(kvp.Key))
-                    {
-                        insertColumns.Add($"[{kvp.Value}]");
-                        insertValues.Add($"@{kvp.Value}");
-                    }
-                }
-
-                if (!row.Keys.Any(key => string.Equals(key, "id", StringComparison.OrdinalIgnoreCase)) && columnMapping.ContainsKey("Id"))
-                {
-                    insertColumns.Remove($"[Id]");
-                    insertValues.Remove($"@Id");
-                }
-
-                string insertQuery = $"INSERT INTO [{tableName}] ({string.Join(", ", insertColumns)}) VALUES ({string.Join(", ", insertValues)})";
-
-                using (var command = new SqlCommand(insertQuery, connection))
-                {
-                    foreach (var param in parameters)
-                    {
-                        command.Parameters.AddWithValue($"@{param.Key}", param.Value);
+                        parameters["Id"] = row.First(kvp => string.Equals(kvp.Key, "id", StringComparison.OrdinalIgnoreCase)).Value;
                     }
 
-                    command.ExecuteNonQuery();
+                    foreach (var kvp in row)
+                    {
+                        if (columnMapping.TryGetValue(kvp.Key, out string cleanParameterName))
+                        {
+                            parameters[cleanParameterName] = kvp.Value ?? DBNull.Value;
+                        }
+                        else
+                        {
+                            Console.WriteLine($"Warning: Key '{kvp.Key}' not found in column mapping.");
+                        }
+                    }
+
+                    var insertColumns = new List<string>();
+                    var insertValues = new List<string>();
+
+                    foreach (var kvp in columnMapping)
+                    {
+                        if (row.ContainsKey(kvp.Key))
+                        {
+                            insertColumns.Add($"[{kvp.Value}]");
+                            insertValues.Add($"@{kvp.Value}");
+                        }
+                    }
+
+                    if (!row.Keys.Any(key => string.Equals(key, "id", StringComparison.OrdinalIgnoreCase)) && columnMapping.ContainsKey("Id"))
+                    {
+                        insertColumns.Remove($"[Id]");
+                        insertValues.Remove($"@Id");
+                    }
+
+                    string insertQuery = $"INSERT INTO [{tableName}] ({string.Join(", ", insertColumns)}) VALUES ({string.Join(", ", insertValues)})";
+
+                    using (var command = new SqlCommand(insertQuery, connection))
+                    {
+                        foreach (var param in parameters)
+                        {
+                            command.Parameters.AddWithValue($"@{param.Key}", param.Value);
+                        }
+
+                        command.ExecuteNonQuery();
+                    }
                 }
             }
-        }
 
-        Console.WriteLine($"Data populated to [{tableName}] table.\n");
+            Console.WriteLine($"Data populated to [{tableName}] table.\n");
+        }
+        catch (SqlException ex)
+        {
+            Console.WriteLine($"SQL error occurred while populating data to [{tableName}]: {ex.Message}");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"An error occurred while populating data to [{tableName}]: {ex.Message}");
+        }
     }
 
     private string SanitizeColumnName(string columnName, HashSet<string> existingColumnNames)
@@ -438,12 +460,20 @@ public class DataRepository
             PdfAcroForm form = PdfAcroForm.GetAcroForm(pdfDocument, true);
             var fields = form.GetAllFormFields();
 
+            var sanitizedFields = fields.ToDictionary(field => SanitizeColumnName(field.Key, new HashSet<string>()), field => field.Value);
+
             foreach (var updatedValue in updatedValues)
             {
-                if (fields.ContainsKey(updatedValue.Key))
+                string sanitizedFieldName = SanitizeColumnName(updatedValue.Key, new HashSet<string>());
+
+                if (sanitizedFields.ContainsKey(sanitizedFieldName))
                 {
-                    var field = fields[updatedValue.Key];
+                    var field = sanitizedFields[sanitizedFieldName];
                     field.SetValue(updatedValue.Value.ToString());
+                }
+                else
+                {
+                    Console.WriteLine($"Warning: Field '{sanitizedFieldName}' not found in PDF form.");
                 }
             }
         }

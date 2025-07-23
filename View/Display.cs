@@ -1,5 +1,4 @@
-﻿using ExcelReader.Controller;
-using ExcelReader.Model;
+﻿using ExcelReader.Model;
 using Spectre.Console;
 using System.Diagnostics;
 
