@@ -120,12 +120,12 @@ public class DataRepository
             var createTableQuery = $"CREATE TABLE [{tableName}] (";
             var existingColumnNames = new HashSet<string>();
 
-            bool hasIdColumn = headers.Any(header => string.Equals(header, "id", StringComparison.OrdinalIgnoreCase));
+            string idColumnName = headers.FirstOrDefault(header => string.Equals(header, "id", StringComparison.OrdinalIgnoreCase));
 
-            if (hasIdColumn)
+            if (idColumnName != null)
             {
                 createTableQuery += "[Id] INT PRIMARY KEY, ";
-                columnMapping["Id"] = "Id";
+                columnMapping[idColumnName] = "Id";
             }
             else
             {
@@ -248,28 +248,25 @@ public class DataRepository
             {
                 var parameters = new Dictionary<string, object>();
 
-                if (row.ContainsKey("Id"))
+                if (row.Keys.Any(key => string.Equals(key, "id", StringComparison.OrdinalIgnoreCase)))
                 {
-                    parameters["Id"] = row["Id"];
+                    parameters["Id"] = row.First(kvp => string.Equals(kvp.Key, "id", StringComparison.OrdinalIgnoreCase)).Value;
                 }
 
                 foreach (var kvp in row)
                 {
                     if (columnMapping.TryGetValue(kvp.Key, out string cleanParameterName))
                     {
-                        parameters[cleanParameterName] = kvp.Value;
+                        parameters[cleanParameterName] = kvp.Value ?? DBNull.Value;
                     }
                     else
                     {
-                        Console.WriteLine($"Warning: Key '{kvp.Key} not found in column mapping.");
+                        Console.WriteLine($"Warning: Key '{kvp.Key}' not found in column mapping.");
                     }
                 }
 
                 var insertColumns = new List<string>();
                 var insertValues = new List<string>();
-              
-                //var insertColumns = string.Join(", ", columnMapping.Keys.Select(h => $"[{h}]"));
-                //var insertValues = string.Join(", ", columnMapping.Keys.Select(h => $"@{columnMapping.FirstOrDefault(x => x.Value == h).Key}"));
 
                 foreach (var kvp in columnMapping)
                 {
@@ -280,7 +277,7 @@ public class DataRepository
                     }
                 }
 
-                if (!row.ContainsKey("Id") && columnMapping.ContainsKey("Id"))
+                if (!row.Keys.Any(key => string.Equals(key, "id", StringComparison.OrdinalIgnoreCase)) && columnMapping.ContainsKey("Id"))
                 {
                     insertColumns.Remove($"[Id]");
                     insertValues.Remove($"@Id");
