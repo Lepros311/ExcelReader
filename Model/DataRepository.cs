@@ -138,7 +138,6 @@ public class DataRepository
                 if (!string.Equals(header, "id", StringComparison.OrdinalIgnoreCase))
                 {
                     string sanitizedHeader = SanitizeColumnName(header, existingColumnNames);
-                    Console.WriteLine(sanitizedHeader);
                     createTableQuery += $"[{sanitizedHeader}] NVARCHAR(MAX), ";
                     columnMapping[header] = sanitizedHeader;
                 }
@@ -284,13 +283,6 @@ public class DataRepository
                 }
 
                 string insertQuery = $"INSERT INTO [{tableName}] ({string.Join(", ", insertColumns)}) VALUES ({string.Join(", ", insertValues)})";
-
-                Console.WriteLine($"Insert Query: {insertQuery}");
-                Console.WriteLine("Parameters:");
-                foreach (var param in parameters)
-                {
-                    Console.WriteLine($"  {param.Key}: {param.Value}");
-                }
 
                 using (var command = new SqlCommand(insertQuery, connection))
                 {
